@@ -33,8 +33,8 @@ namespace ComponentSelectorSearch
                     var name = ReflectionExtensions.GetNiceName(result.Type, "<", ">");
 
                     var button = result.Type.IsGenericTypeDefinition ?
-                            builder.Button(name, genericTypeColor, details.OpenGenericTypesPressed, Path.Combine(path + searchPath + search, result.Type.FullName), 0.35f)
-                            : builder.Button(name, typeColor, details.OnAddComponentPressed, result.Type.FullName, 0.35f);
+                            builder.Button(name, genericTypeColor, details.OpenGenericTypesPressed, Path.Combine(path + searchPath + search, result.Type.AssemblyQualifiedName), 0.35f)
+                            : builder.Button(name, typeColor, details.OnAddComponentPressed, builder.World.Types.EncodeType(result.Type), 0.35f);
 
                     button.Label.ParseRichText.Value = false;
 
@@ -59,8 +59,8 @@ namespace ComponentSelectorSearch
                     var name = ReflectionExtensions.GetNiceName(result.Type, "<", ">");
 
                     var button = result.Type.IsGenericTypeDefinition ?
-                            builder.Button(name, genericTypeColor, details.OpenGenericTypesPressed, Path.Combine(path + searchPath + search, result.Type.FullName), 0.35f)
-                            : builder.Button(name, typeColor, details.OnAddComponentPressed, result.Type.FullName, 0.35f);
+                            builder.Button(name, genericTypeColor, details.OpenGenericTypesPressed, Path.Combine(path + searchPath + search, result.Type.AssemblyQualifiedName), 0.35f)
+                            : builder.Button(name, typeColor, details.OnAddComponentPressed, builder.World.Types.EncodeType(result.Type), 0.35f);
 
                     button.Label.ParseRichText.Value = false;
                     button.Label.Color.Value = colorX.Black;
