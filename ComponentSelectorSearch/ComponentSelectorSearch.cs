@@ -1,32 +1,32 @@
 ﻿using System;
 using System.Collections.Generic;
 using HarmonyLib;
-using NeosModLoader;
+using ResoniteModLoader;
 
-namespace ComponentAttacherSearch
+namespace ComponentSelectorSearch
 {
-    public partial class ComponentAttacherSearch : NeosMod
+    public partial class ComponentSelectorSearch : ResoniteMod
     {
         internal static ModConfiguration Config;
 
         [AutoRegisterConfigKey]
-        private static readonly ModConfigurationKey<bool> AlwaysShowFullPath = new("AlwaysShowFullPath", "Whether to always show the full category path on component results, rather than only on hover.", () => true);
+        private static readonly ModConfigurationKey<bool> AlwaysShowFullPath = new("AlwaysShowFullPath", "Whether to always show the full category path on component results, rather than only on hover.", () => false);
 
         [AutoRegisterConfigKey]
         private static readonly ModConfigurationKey<HashSet<string>> ExcludedCategoriesKey = new("ExcludedCategories", "Exclude specific categories. Discarded while loading.", internalAccessOnly: true);
 
         [AutoRegisterConfigKey]
-        private static readonly ModConfigurationKey<int> SearchRefreshDelay = new("SearchRefreshDelay", "Time in ms to wait after search input change before refreshing the results. 0 to always refresh.", () => 750, valueValidator: value => value >= 0);
+        private static readonly ModConfigurationKey<int> SearchRefreshDelay = new("SearchRefreshDelay", "Time in ms to wait after search input change before refreshing the results. 0 to always refresh.", () => 0, valueValidator: value => value >= 0);
 
         [AutoRegisterConfigKey]
-        private static readonly ModConfigurationKey<string> UserExcludedCategories = new("UserExcludedCategories", "Exclude specific categories by path (case sensitive). Separate entries by semicolon. Search will work inside them anyways.", () => "/LogiX/Actions; /LogiX/Cast; /LogiX/Math; /LogiX/Operators");
+        private static readonly ModConfigurationKey<string> UserExcludedCategories = new("UserExcludedCategories", "Exclude specific categories by path (case sensitive). Separate entries by semicolon. Search will work inside them anyways.", () => "/ProtoFlux; /ProtoFlux/FrooxEngine/ProtoFlux/CoreNodes; /ProtoFlux/Runtimes/DSP");
 
         private static readonly char[] UserExclusionSeparator = new[] { ';' };
         private static string lastUserExcludedCategories = "";
-        public override string Author => "Banane9";
-        public override string Link => "https://github.com/Banane9/NeosComponentAttacherSearch";
-        public override string Name => "ComponentAttacherSearch";
-        public override string Version => "1.1.0";
+        public override string Author => "Banane9/Delta/sctanf";
+        public override string Link => "https://github.com/sctanf/ResoniteComponentSelectorSearch";
+        public override string Name => "ComponentSelectorSearch";
+        public override string Version => "1.2.0";
         private static HashSet<string> ExcludedCategories => Config.GetValue(ExcludedCategoriesKey);
 
         public override void OnEngineInit()

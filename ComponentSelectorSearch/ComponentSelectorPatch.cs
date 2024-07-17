@@ -6,30 +6,31 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using BaseX;
+using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.UIX;
 using HarmonyLib;
 
-namespace ComponentAttacherSearch
+namespace ComponentSelectorSearch
 {
-    public partial class ComponentAttacherSearch
+    public partial class ComponentSelectorSearch
     {
-        [HarmonyPatch(typeof(ComponentAttacher), "BuildUI")]
-        private static class ComponentAttacherPatch
+        [HarmonyPatch(typeof(ComponentSelector), "BuildUI")]
+        private static class ComponentSelectorPatch
         {
             private const string searchPath = "/Search/";
-            private static readonly ConditionalWeakTable<ComponentAttacher, AttacherDetails> attacherDetails = new();
-            private static readonly color cancelColor = new(1f, 0.8f, 0.8f, 1f);
-            private static readonly color categoryColor = new(1f, 1f, 0.8f, 1f);
-            private static readonly color genericTypeColor = new(0.8f, 1f, 0.8f, 1f);
-            private static readonly color typeColor = new(0.8f, 0.8f, 1f, 1f);
+            private static readonly ConditionalWeakTable<ComponentSelector, SelectorDetails> selectorDetails = new();
+            private static readonly colorX cancelColor = RadiantUI_Constants.Sub.RED;
+            private static readonly colorX categoryColor = RadiantUI_Constants.MidLight.YELLOW;
+            private static readonly colorX genericTypeColor = RadiantUI_Constants.MidLight.GREEN;
+            private static readonly colorX typeColor = RadiantUI_Constants.MidLight.CYAN;
 
-            private static void AddHoverButtons(UIBuilder builder, AttacherDetails details, string path, string search, IEnumerable<ComponentResult> results)
+            private static void AddHoverButtons(UIBuilder builder, SelectorDetails details, string path, string search, IEnumerable<ComponentResult> results)
             {
+                RadiantUI_Constants.SetupEditorStyle(builder);
                 foreach (var result in results)
                 {
-                    var name = result.Type.GetNiceName();
+                    var name = ReflectionExtensions.GetNiceName(result.Type, "<", ">");
 
                     var button = result.Type.IsGenericTypeDefinition ?
                             builder.Button(name, genericTypeColor, details.OpenGenericTypesPressed, Path.Combine(path + searchPath + search, result.Type.FullName), 0.35f)
@@ -46,28 +47,30 @@ namespace ComponentAttacherSearch
                 }
             }
 
-            private static void AddPermanentButtons(UIBuilder builder, AttacherDetails details, string path, string search, IEnumerable<ComponentResult> results)
+            private static void AddPermanentButtons(UIBuilder builder, SelectorDetails details, string path, string search, IEnumerable<ComponentResult> results)
             {
                 builder.PushStyle();
+                RadiantUI_Constants.SetupEditorStyle(builder);
                 builder.Style.MinHeight = 48;
                 var root = builder.CurrentRect;
 
                 foreach (var result in results)
                 {
-                    var name = result.Type.GetNiceName();
+                    var name = ReflectionExtensions.GetNiceName(result.Type, "<", ">");
 
                     var button = result.Type.IsGenericTypeDefinition ?
                             builder.Button(name, genericTypeColor, details.OpenGenericTypesPressed, Path.Combine(path + searchPath + search, result.Type.FullName), 0.35f)
                             : builder.Button(name, typeColor, details.OnAddComponentPressed, result.Type.FullName, 0.35f);
 
                     button.Label.ParseRichText.Value = false;
+                    button.Label.Color.Value = colorX.Black;
                     builder.NestInto(button.RectTransform);
 
                     builder.HorizontalHeader(20, out var header, out var content);
                     ((Text)button.LabelTextField.Parent).Slot.Parent = content.Slot;
 
                     builder.NestInto(header);
-                    builder.Text(GetPrettyPath(result.Category.GetPath()) + " >", parseRTF: false).Color.Value = color.DarkGray;
+                    builder.Text(GetPrettyPath(result.Category.GetPath()) + " >", parseRTF: false).Color.Value = colorX.Black;
 
                     builder.NestOut();
                     builder.NestOut();
@@ -76,9 +79,9 @@ namespace ComponentAttacherSearch
                 builder.PopStyle();
             }
 
-            private static void AddSearchbar(ComponentAttacher attacher, AttacherDetails details)
+            private static void AddSearchbar(ComponentSelector selector, SelectorDetails details)
             {
-                var uiRoot = (SyncRef<Slot>)attacher.TryGetField("_uiRoot");
+                var uiRoot = (SyncRef<Slot>)selector.TryGetField("_uiRoot");
 
                 var builder = new UIBuilder(uiRoot.Target.Parent.Parent);
 
@@ -93,22 +96,25 @@ namespace ComponentAttacherSearch
                 footer.OffsetMin.Value += new float2(4, 0);
 
                 builder = new UIBuilder(content);
+                RadiantUI_Constants.SetupEditorStyle(builder);
                 details.SearchBar = builder.TextField(null, parseRTF: false);
+//                details.SearchBar = builder.TextField(null, undo: false, null, parseRTF: false);
                 details.Text.NullContent.Value = "<i>Search</i>";
                 details.Editor.FinishHandling.Value = TextEditor.FinishAction.NullOnWhitespace;
-                details.Text.Content.OnValueChange += MakeBuildUICall(attacher, details);
+                details.Text.Content.OnValueChange += MakeBuildUICall(selector, details);
 
                 builder = new UIBuilder(footer);
+                RadiantUI_Constants.SetupEditorStyle(builder);
                 MakeLocalButton(builder, "∅", (sender) => details.Text.Content.Value = null);
             }
 
             [HarmonyPrefix]
-            private static bool BuildUIPrefix(ComponentAttacher __instance, ref string path, bool genericType)
+            private static bool BuildUIPrefix(ComponentSelector __instance, ref string path, bool genericType)
             {
-                if (!attacherDetails.TryGetValue(__instance, out var details))
+                if (!selectorDetails.TryGetValue(__instance, out var details))
                 {
-                    details = new AttacherDetails(__instance);
-                    attacherDetails.Add(__instance, details);
+                    details = new SelectorDetails(__instance);
+                    selectorDetails.Add(__instance, details);
                 }
 
                 if (genericType)
@@ -134,17 +140,22 @@ namespace ComponentAttacherSearch
                 if (search == null && !details.Editor.IsEditing)
                     details.Text.Content.Value = null;
 
-                if (string.IsNullOrWhiteSpace(search) || (search.Length < 3 && path.Length < 2))
+//                if (string.IsNullOrWhiteSpace(search) || (search.Length < 3 && path.Length < 2))
+                if (string.IsNullOrWhiteSpace(search) || search.Length < 3)
                     return true;
 
-                var builder = new UIBuilder(__instance._uiRoot);
+
+                var builder = new UIBuilder((SyncRef<Slot>)__instance.TryGetField("_uiRoot"));
                 builder.Root.DestroyChildren();
+                RadiantUI_Constants.SetupEditorStyle(builder);
                 builder.Style.MinHeight = 32;
 
                 foreach (var subCategory in SearchCategories(componentLibrary, search))
                 {
                     var categoryPath = subCategory.GetPath();
-                    builder.Button(GetPrettyPath(categoryPath) + " >", categoryColor, details.OnOpenCategoryPressed, categoryPath, 0.35f).Label.ParseRichText.Value = false;
+                    Button button = builder.Button(GetPrettyPath(categoryPath) + " >", categoryColor, details.OnOpenCategoryPressed, categoryPath, 0.35f);
+                    button.Label.ParseRichText.Value = false;
+                    button.Label.Color.Value = colorX.Black;
                 }
 
                 var typeResults = SearchTypes(componentLibrary, search);
@@ -159,18 +170,23 @@ namespace ComponentAttacherSearch
                 return false;
             }
 
-            private static void ClearSearchbar(ComponentAttacher attacher)
+            private static void ClearSearchbar(ComponentSelector selector)
             {
-                var contentRoot = attacher._uiRoot.Target.Parent;
+                SyncRef<Slot> syncRef = (SyncRef<Slot>)selector.TryGetField("_uiRoot");
+                if (syncRef != null)
+                {
+                    var contentRoot = syncRef.Target.Parent;
 
-                contentRoot.Parent = contentRoot.Parent.Parent;
-                contentRoot.Parent.DestroyChildren(filter: slot => slot != contentRoot);
+                    contentRoot.Parent = contentRoot.Parent.Parent;
+                    contentRoot.Parent.DestroyChildren(filter: slot => slot != contentRoot);
+//                    contentRoot.Parent.DestroyChildren(preserveAssets: false, sendDestroyingEvent: true, includeLocal: false, (Slot slot) => slot != contentRoot);
+                }
             }
 
             private static string GetPrettyPath(string path)
-                => path.Substring(1).Replace("/", " > ");
+                => path.Substring(1).Replace("ProtoFlux/Runtimes/Execution/Nodes/", "").Replace("/", " > ");
 
-            private static SyncFieldEvent<string> MakeBuildUICall(ComponentAttacher attacher, AttacherDetails details)
+            private static SyncFieldEvent<string> MakeBuildUICall(ComponentSelector selector, SelectorDetails details)
             {
                 return field =>
                 {
@@ -188,7 +204,7 @@ namespace ComponentAttacherSearch
                         if (token.IsCancellationRequested)
                             return;
 
-                        attacher.RunSynchronously(() => attacher.BuildUI(attacherDetails.GetOrCreateValue(attacher).LastPath + searchPath + field.Value, false));
+                        selector.RunSynchronously(() => selector.BuildUI(selectorDetails.GetOrCreateValue(selector).LastPath + searchPath + field.Value, false));
                     });
                 };
             }

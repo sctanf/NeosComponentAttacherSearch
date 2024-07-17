@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ComponentAttacherSearch
+namespace ComponentSelectorSearch
 {
     internal readonly struct ComponentResult
     {
