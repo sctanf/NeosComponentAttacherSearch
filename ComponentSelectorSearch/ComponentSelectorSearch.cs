@@ -26,7 +26,7 @@ namespace ComponentSelectorSearch
         public override string Author => "Banane9/Delta/sctanf";
         public override string Link => "https://github.com/sctanf/ResoniteComponentSelectorSearch";
         public override string Name => "ComponentSelectorSearch";
-        public override string Version => "1.2.0";
+        public override string Version => "1.2.1";
         private static HashSet<string> ExcludedCategories => Config.GetValue(ExcludedCategoriesKey);
 
         public override void OnEngineInit()
